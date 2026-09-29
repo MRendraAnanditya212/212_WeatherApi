@@ -8,30 +8,52 @@ const PORT = 3000;
 app.use(express.static(path.join(__dirname, "public")));
 
 app.get("/api/lokasi", async (req, res) => {
-    const kota = "jakarta";
+    const q = (req.query.q || "jakarta").toString().trim();
+
+    if (!q) {
+        return res.status(400).json({
+            message: "Nama lokasi wajib diisi"
+        });
+    }
 
     const apiKey = "TmW3n2IbOKaZxkghOoYB";
-
-    const url = `https://api.maptiler.com/geocoding/${kota}.json?key=${apiKey}`;
+    const url = `https://api.maptiler.com/geocoding/${encodeURIComponent(q)}.json?key=${apiKey}`;
 
     try {
         const response = await axios.get(url);
+        const feature = response.data?.features?.[0];
 
-        const data = response.data;
+        if (!feature || !feature.geometry || !Array.isArray(feature.geometry.coordinates)) {
+            return res.status(404).json({
+                message: "Lokasi tidak ditemukan"
+            });
+        }
 
-        const lokasi = data.features[0].matching_text;
-        const koordinat = data.features[0].geometry.coordinates;
+        const [longitude, latitude] = feature.geometry.coordinates;
+        const context = feature.context || [];
 
-        res.json({
-            kota: lokasi,
-            koordinat: koordinat
+        const getContextText = (prefix) => {
+            const item = context.find((entry) => (entry.id || "").startsWith(prefix));
+            return item?.text || "";
+        };
+
+        const negara = getContextText("country") || feature.properties?.country || "Tidak diketahui";
+        const provinsi = getContextText("region") || feature.properties?.region || "Tidak diketahui";
+        const kecamatan = getContextText("locality") || getContextText("district") || feature.properties?.locality || feature.properties?.county || feature.text || "Tidak diketahui";
+
+        return res.json({
+            input: q,
+            negara,
+            provinsi,
+            kecamatan,
+            longitude,
+            latitude
         });
 
     } catch (error) {
-
         console.error(error.message);
 
-        res.status(500).json({
+        return res.status(500).json({
             message: "Gagal mengambil data dari MapTiler"
         });
     }

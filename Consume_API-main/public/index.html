@@ -240,16 +240,23 @@
 
       if (!res.ok) throw new Error(data.message || "Terjadi kesalahan");
 
-      $("rInput").textContent = data.input;
-      $("rNegara").textContent = data.negara;
-      $("rProvinsi").textContent = data.provinsi;
-      $("rKecamatan").textContent = data.kecamatan;
-      $("rLong").textContent = data.longitude.toFixed(6);
-      $("rLat").textContent = data.latitude.toFixed(6);
+      const longitude = Number(data.longitude);
+      const latitude = Number(data.latitude);
+
+      if (!Number.isFinite(longitude) || !Number.isFinite(latitude)) {
+        throw new Error("Data koordinat tidak valid");
+      }
+
+      $("rInput").textContent = data.input || q;
+      $("rNegara").textContent = data.negara || "-";
+      $("rProvinsi").textContent = data.provinsi || "-";
+      $("rKecamatan").textContent = data.kecamatan || "-";
+      $("rLong").textContent = longitude.toFixed(6);
+      $("rLat").textContent = latitude.toFixed(6);
 
       // posisi pin di mini map (equirectangular)
-      $("pin").style.left = ((data.longitude + 180) / 360) * 100 + "%";
-      $("pin").style.top = ((90 - data.latitude) / 180) * 100 + "%";
+      $("pin").style.left = ((longitude + 180) / 360) * 100 + "%";
+      $("pin").style.top = ((90 - latitude) / 180) * 100 + "%";
 
       status.innerHTML = "";
       result.classList.add("show");
